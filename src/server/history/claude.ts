@@ -1,4 +1,4 @@
-import { open, readdir, readFile, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
@@ -10,16 +10,9 @@ import { array, isRecord, record } from "../../shared/parse.ts";
 import type { HerdrClient } from "../herdr.ts";
 import { ClaudeTranscript } from "./claude-records.ts";
 import type { ImageStore } from "./images.ts";
+import { JsonlTail } from "./jsonl.ts";
 import type { HistoryProvider } from "./types.ts";
-
-/** The most items that the bridge sends in a first load. */
-const MAX_ITEMS = 200;
-
-/**
- * The number of items before `since` that the bridge sends again. A tool result changes its tool
- * call, which can be a few items back.
- */
-const RESEND = 12;
+import { historyWindow } from "./window.ts";
 
 /** The time that the bridge keeps the session file of a pane before it looks again. */
 const LOCATE_TTL_MS = 5000;
@@ -38,72 +31,13 @@ async function exists(path: string): Promise<boolean> {
   );
 }
 
-/** Reads a growing JSONL file. Each call parses only the lines that are new since the last call. */
-class SessionFile {
-  #offset = 0;
-  #transcript: ClaudeTranscript;
-
-  constructor(
-    readonly path: string,
-    private readonly images: ImageStore,
-    private readonly uploadDir: string | null,
-  ) {
-    this.#transcript = new ClaudeTranscript(images, uploadDir);
-  }
-
-  async read(): Promise<ClaudeTranscript> {
-    const { size } = await stat(this.path);
-
-    if (size < this.#offset) {
-      this.#offset = 0;
-      this.#transcript = new ClaudeTranscript(this.images, this.uploadDir);
-    }
-
-    if (size === this.#offset) {
-      return this.#transcript;
-    }
-
-    const handle = await open(this.path, "r");
-
-    try {
-      const bytes = new Uint8Array(size - this.#offset);
-
-      await handle.read(bytes, 0, bytes.length, this.#offset);
-
-      const end = bytes.lastIndexOf(10);
-
-      if (end === -1) {
-        return this.#transcript;
-      }
-
-      const chunk = new TextDecoder().decode(bytes.subarray(0, end));
-
-      this.#offset += end + 1;
-
-      for (const line of chunk.split("\n")) {
-        if (line.trim()) {
-          try {
-            this.#transcript.add(JSON.parse(line));
-          } catch {
-            // A line that is not valid JSON is not a record. Claude Code can write it later again.
-          }
-        }
-      }
-
-      return this.#transcript;
-    } finally {
-      await handle.close();
-    }
-  }
-}
-
 /**
  * Reads the history of Claude Code. Herdr gives the processes in the pane. Claude Code writes
  * `~/.claude/sessions/<pid>.json` with the session ID of each process, and the session is in
  * `~/.claude/projects/<cwd slug>/<session id>.jsonl`.
  */
 export class ClaudeHistory implements HistoryProvider {
-  #files = new Map<string, SessionFile>();
+  #files = new Map<string, JsonlTail<ClaudeTranscript>>();
   #located = new Map<string, { path: string | null; at: number }>();
 
   constructor(
@@ -123,26 +57,13 @@ export class ClaudeHistory implements HistoryProvider {
     let file = this.#files.get(path);
 
     if (!file) {
-      file = new SessionFile(path, this.images, this.uploadDir);
+      file = new JsonlTail(path, () => new ClaudeTranscript(this.images, this.uploadDir));
       this.#files.set(path, file);
     }
 
     const { items, model, effort } = await file.read();
-    const total = items.length;
 
-    const start =
-      since === null || since > total
-        ? Math.max(0, total - MAX_ITEMS)
-        : Math.max(0, since - RESEND);
-
-    return {
-      key: basename(path, ".jsonl"),
-      total,
-      start,
-      items: items.slice(start),
-      model,
-      effort,
-    };
+    return historyWindow({ key: basename(path, ".jsonl"), items, model, effort }, since);
   }
 
   controls(cwd: string | null): Promise<HarnessControls> {

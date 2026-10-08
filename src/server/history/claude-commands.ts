@@ -54,7 +54,8 @@ function firstLine(text: string): string {
   );
 }
 
-async function skills(dir: string): Promise<CommandInfo[]> {
+/** Reads the skills in `dir`. Each skill is a folder with a `SKILL.md` file. */
+export async function skills(dir: string): Promise<CommandInfo[]> {
   const names = await readdir(dir).catch(() => []);
 
   const found = await Promise.all(
@@ -80,7 +81,8 @@ async function skills(dir: string): Promise<CommandInfo[]> {
   return found.filter((command) => command !== null);
 }
 
-async function commands(dir: string): Promise<CommandInfo[]> {
+/** Reads the custom commands in `dir`. Each command is a Markdown file. */
+export async function commands(dir: string): Promise<CommandInfo[]> {
   const files = await readdir(dir, { recursive: true }).catch(() => []);
 
   const found = await Promise.all(
@@ -145,5 +147,10 @@ export async function claudeControls(
     .filter((command) => command.source !== "builtin")
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  return { commands: [...builtins, ...custom], models: MODELS, efforts: [...EFFORT_ORDER] };
+  return {
+    commands: [...builtins, ...custom],
+    models: MODELS,
+    efforts: [...EFFORT_ORDER],
+    defaults: true,
+  };
 }

@@ -1,26 +1,18 @@
-import type { ChatItem, DiffHunk, DiffLine, FileDiff } from "../../shared/history.ts";
+import type { ChatItem, FileDiff } from "../../shared/history.ts";
 import { isRecord } from "../../shared/parse.ts";
 import type { ImageStore } from "./images.ts";
-
-/** The longest tool output that the bridge sends, in characters. */
-const MAX_OUTPUT = 4000;
-
-/** The most diff lines that the bridge sends for one file. */
-const MAX_DIFF_LINES = 800;
+import {
+  clip,
+  firstStringArg,
+  MAX_OUTPUT,
+  relative,
+  stripAnsi,
+  text,
+  toolOutput,
+} from "./tool-text.ts";
+import { DiffBuilder, diffForNewFile } from "./unified-diff.ts";
 
 type ToolItem = Extract<ChatItem, { type: "tool" }>;
-
-function text(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
-
-function clip(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max)}\n…` : value;
-}
-
-function relative(path: string, cwd: string | null): string {
-  return cwd && path.startsWith(`${cwd}/`) ? path.slice(cwd.length + 1) : path;
-}
 
 /** Gives one line that tells what a tool call does. */
 export function summarizeTool(name: string, input: unknown, cwd: string | null): string {
@@ -52,11 +44,8 @@ export function summarizeTool(name: string, input: unknown, cwd: string | null):
     case "Agent":
       return text(args.description) ?? name;
 
-    default: {
-      const first = Object.values(args).find((value) => typeof value === "string");
-
-      return typeof first === "string" ? clip(first.split("\n")[0] ?? "", 160) : "";
-    }
+    default:
+      return firstStringArg(input);
   }
 }
 
@@ -74,50 +63,22 @@ export function diffFromResult(result: unknown, cwd: string | null): FileDiff | 
   }
 
   const path = relative(result.filePath, cwd);
-  const patch = Array.isArray(result.structuredPatch) ? result.structuredPatch : [];
-  const hunks: DiffHunk[] = [];
-  let added = 0;
-  let removed = 0;
-  let kept = 0;
-  let truncated = false;
-
-  function push(hunk: DiffHunk, line: DiffLine) {
-    if (line.kind === "add") {
-      added++;
-    } else if (line.kind === "del") {
-      removed++;
-    }
-
-    if (kept < MAX_DIFF_LINES) {
-      hunk.lines.push(line);
-      kept++;
-    } else {
-      truncated = true;
-    }
-  }
 
   if (result.type === "create" && typeof result.content === "string") {
-    const hunk: DiffHunk = { lines: [] };
-
-    result.content
-      .replace(/\n$/, "")
-      .split("\n")
-      .forEach((line, index) =>
-        push(hunk, { kind: "add", text: line, oldNo: null, newNo: index + 1 }),
-      );
-    hunks.push(hunk);
-
-    return { path, action: "create", added, removed, hunks, truncated };
+    return diffForNewFile(path, result.content);
   }
 
-  for (const raw of patch) {
+  const builder = new DiffBuilder();
+
+  for (const raw of Array.isArray(result.structuredPatch) ? result.structuredPatch : []) {
     if (!isRecord(raw) || !Array.isArray(raw.lines)) {
       continue;
     }
 
-    const hunk: DiffHunk = { lines: [] };
     let oldNo = typeof raw.oldStart === "number" ? raw.oldStart : 1;
     let newNo = typeof raw.newStart === "number" ? raw.newStart : 1;
+
+    builder.hunk();
 
     for (const line of raw.lines) {
       if (typeof line !== "string" || line.startsWith("\\")) {
@@ -127,52 +88,16 @@ export function diffFromResult(result: unknown, cwd: string | null): FileDiff | 
       const body = line.slice(1);
 
       if (line.startsWith("+")) {
-        push(hunk, { kind: "add", text: body, oldNo: null, newNo: newNo++ });
+        builder.push({ kind: "add", text: body, oldNo: null, newNo: newNo++ });
       } else if (line.startsWith("-")) {
-        push(hunk, { kind: "del", text: body, oldNo: oldNo++, newNo: null });
+        builder.push({ kind: "del", text: body, oldNo: oldNo++, newNo: null });
       } else {
-        push(hunk, { kind: "context", text: body, oldNo: oldNo++, newNo: newNo++ });
+        builder.push({ kind: "context", text: body, oldNo: oldNo++, newNo: newNo++ });
       }
     }
-
-    if (hunk.lines.length > 0) {
-      hunks.push(hunk);
-    }
   }
 
-  if (hunks.length === 0) {
-    return null;
-  }
-
-  return {
-    path,
-    action: typeof result.oldString === "string" ? "edit" : "update",
-    added,
-    removed,
-    hunks,
-    truncated,
-  };
-}
-
-function toolOutput(content: unknown): string {
-  if (typeof content === "string") {
-    return content;
-  }
-
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => (isRecord(part) && typeof part.text === "string" ? part.text : ""))
-      .filter(Boolean)
-      .join("\n");
-  }
-
-  return "";
-}
-
-/** Removes the color codes of a terminal from the text. */
-export function stripAnsi(text: string): string {
-  // eslint-disable-next-line no-control-regex -- the codes start with the escape character.
-  return text.replace(/\u001b\[[0-9;?]*[A-Za-z]/g, "");
+  return builder.build(path, typeof result.oldString === "string" ? "edit" : "update");
 }
 
 /** Claude Code puts these marks in the text where the user pasted an image. */

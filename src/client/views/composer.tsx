@@ -4,6 +4,7 @@ import {
   type CommandInfo,
   filterCommands,
   type HarnessControls,
+  isModel,
   type ModelChange,
 } from "../../shared/harness.ts";
 import { MAX_IMAGES } from "../../shared/rpc.ts";
@@ -26,6 +27,8 @@ export interface ComposerProps {
   controls: HarnessControls | null;
   /** The text of the model chip, or `null` to hide the chip. */
   modelLabel: string | null;
+  /** The bridge cannot change the model, so the chip only shows it. */
+  modelLocked: boolean;
   onSend: (text: string, files: Blob[]) => Promise<void>;
   onStop: () => void;
   onOpenModel: () => void;
@@ -57,6 +60,7 @@ export function Composer({
   disabled,
   controls,
   modelLabel,
+  modelLocked,
   onSend,
   onStop,
   onOpenModel,
@@ -241,7 +245,12 @@ export function Composer({
             </button>
           )}
           {modelLabel && (
-            <button type="button" class="model-chip" disabled={disabled} onClick={onOpenModel}>
+            <button
+              type="button"
+              class="model-chip"
+              disabled={disabled || modelLocked}
+              onClick={onOpenModel}
+            >
               {modelLabel}
             </button>
           )}
@@ -281,9 +290,11 @@ export interface ModelSheetProps {
  * the agent is ready for input.
  */
 export function ModelSheet({ controls, model, effort, onApply, onClose }: ModelSheetProps) {
-  const current = controls.models.find((option) => model?.includes(`-${option.alias}-`));
-  const [picked, setPicked] = useState(current?.alias ?? controls.models[0]?.alias ?? "");
-  const [level, setLevel] = useState<string | null>(effort);
+  const current = controls.models.find((option) => isModel(option.alias, model));
+  const [choice, setPicked] = useState<string | null>(null);
+  const [touched, setLevel] = useState<string | null | undefined>(undefined);
+  const picked = choice ?? current?.alias ?? controls.models[0]?.alias ?? "";
+  const level = touched === undefined ? effort : touched;
   const [scope, setScope] = useState<ModelChange["scope"]>("session");
   const changed = picked !== current?.alias || level !== effort || scope === "default";
 
@@ -309,33 +320,39 @@ export function ModelSheet({ controls, model, effort, onApply, onClose }: ModelS
             </button>
           ))}
         </div>
-        <h3>Effort</h3>
-        <div class="effort-row">
-          {controls.efforts.map((value) => (
-            <button
-              key={value}
-              type="button"
-              class={`effort ${value === level ? "current" : ""}`}
-              onClick={() => setLevel(value)}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
-        <label class="scope-row" htmlFor="scope-default">
-          <span>
-            <span class="scope-title">Also make it my default</span>
-            <span class="scope-note">New sessions start with this model and effort.</span>
-          </span>
-          <input
-            id="scope-default"
-            type="checkbox"
-            class="switch"
-            aria-label="Also make it my default"
-            checked={scope === "default"}
-            onChange={(event) => setScope(event.currentTarget.checked ? "default" : "session")}
-          />
-        </label>
+        {controls.efforts.length > 0 && (
+          <>
+            <h3>Effort</h3>
+            <div class="effort-row">
+              {controls.efforts.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  class={`effort ${value === level ? "current" : ""}`}
+                  onClick={() => setLevel(value)}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {controls.defaults && (
+          <label class="scope-row" htmlFor="scope-default">
+            <span>
+              <span class="scope-title">Also make it my default</span>
+              <span class="scope-note">New sessions start with this model and effort.</span>
+            </span>
+            <input
+              id="scope-default"
+              type="checkbox"
+              class="switch"
+              aria-label="Also make it my default"
+              checked={scope === "default"}
+              onChange={(event) => setScope(event.currentTarget.checked ? "default" : "session")}
+            />
+          </label>
+        )}
         <button
           type="button"
           class="apply-button"

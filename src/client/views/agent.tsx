@@ -242,10 +242,11 @@ function AgentBody({ agent }: { agent: AgentView }) {
           disabled={!connected}
           controls={controls}
           modelLabel={
-            controls && controls.models.length > 0
+            controls && (controls.models.length > 0 || sessionModel)
               ? chipLabel(agent.modelChange, sessionModel, sessionEffort)
               : null
           }
+          modelLocked={!controls || controls.models.length === 0}
           onSend={send}
           onStop={() => void sendKeys(adapterFor(agent.kind).interruptKeys)}
           onOpenModel={() => setModelOpen(true)}
@@ -324,7 +325,7 @@ function chipLabel(
     return change.label;
   }
 
-  const name = model ? (model.startsWith("claude-") ? modelLabel(model) : model) : "Model";
+  const name = model ? modelLabel(model) : "Model";
 
   return effort ? `${name} · ${effort}` : name;
 }

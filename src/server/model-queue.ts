@@ -1,4 +1,4 @@
-import type { ModelChange } from "../shared/harness.ts";
+import { type ModelChange, modelLabel } from "../shared/harness.ts";
 import type { AppState, ModelChangeView } from "../shared/messages.ts";
 
 /** The time that the queue shows a change that is done or that failed. */
@@ -14,9 +14,14 @@ interface Entry {
 /** Changes the model of an agent. */
 export type ApplyModel = (paneId: string, change: ModelChange) => Promise<void>;
 
-/** Gives the text that the PWA shows for a change, for example `Sonnet · high`. */
+/**
+ * Gives the text that the PWA shows for a change, for example `Sonnet · high`. A model with a
+ * provider, for example `openai/gpt-6`, shows without the provider.
+ */
 export function changeLabel(change: ModelChange): string {
-  const model = `${change.model.charAt(0).toUpperCase()}${change.model.slice(1)}`;
+  const model = /^[a-z]+$/.test(change.model)
+    ? `${change.model.charAt(0).toUpperCase()}${change.model.slice(1)}`
+    : modelLabel(change.model);
 
   return change.effort ? `${model} · ${change.effort}` : model;
 }

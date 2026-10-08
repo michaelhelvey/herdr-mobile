@@ -23,6 +23,8 @@ export interface HarnessControls {
   commands: CommandInfo[];
   models: ModelOption[];
   efforts: string[];
+  /** The bridge can also save a model change as the default for new sessions. */
+  defaults: boolean;
 }
 
 /** A question that an agent asks, with the options that the user can pick. */
@@ -90,21 +92,41 @@ export function parseControls(value: unknown): HarnessControls {
     efforts: array(controls.efforts, "controls.efforts").map((raw, index) =>
       string(raw, `controls.efforts[${index}]`),
     ),
+    defaults: controls.defaults !== false,
   };
 }
 
 /**
- * Gives a short name for a model ID, for example `Opus 5.5` for `claude-opus-5-5`. An ID that has
- * a different form stays as it is.
+ * Gives a short name for a model ID, for example `Opus 5.5` for `claude-opus-5-5`. For an ID with
+ * a provider, such as `openai/gpt-6`, it gives the part after the last slash. An ID that has a
+ * different form stays as it is.
  */
 export function modelLabel(id: string): string {
   const match = /^claude-([a-z]+)-(\d+)-(\d+)/.exec(id);
 
   if (!match?.[1]) {
-    return id;
+    return id.slice(id.lastIndexOf("/") + 1);
   }
 
   return `${match[1].charAt(0).toUpperCase()}${match[1].slice(1)} ${match[2]}.${match[3]}`;
+}
+
+/**
+ * Tells if the model option `alias` is the model `id` of a session. Claude Code aliases are a part
+ * of the ID (`opus` in `claude-opus-5-5`). Other harnesses use the full ID, with or without the
+ * provider (`t4/gpt-6` and `gpt-6`).
+ */
+export function isModel(alias: string, id: string | null): boolean {
+  if (!id) {
+    return false;
+  }
+
+  return (
+    id === alias ||
+    id.endsWith(`/${alias}`) ||
+    alias.endsWith(`/${id}`) ||
+    id.includes(`-${alias}-`)
+  );
 }
 
 /** Gives the commands whose name starts with the text after the slash, then the others that contain it. */

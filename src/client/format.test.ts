@@ -22,4 +22,15 @@ describe("agentTitle", () => {
       agentTitle({ paneId: "w1:p1", kind: "codex", title: "  ", status: "idle", cwd: null }),
     ).toBe("codex");
   });
+
+  test("removes the harness parts of OpenCode and pi titles", () => {
+    const base = { paneId: "w1:p1", status: "idle" as const, cwd: "/Users/me/dev/play" };
+
+    expect(agentTitle({ ...base, kind: "opencode", title: "OC | Fix the parser" })).toBe(
+      "Fix the parser",
+    );
+    expect(agentTitle({ ...base, kind: "opencode", title: "OpenCode" })).toBe("opencode");
+    expect(agentTitle({ ...base, kind: "pi", title: "π - refactor - play" })).toBe("refactor");
+    expect(agentTitle({ ...base, kind: "pi", title: "π - play" })).toBe("pi");
+  });
 });

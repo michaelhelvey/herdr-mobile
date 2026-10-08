@@ -94,8 +94,10 @@ A fake agent cannot get a prompt or keys. Herdr (0.9.3) accepts `agent.prompt` a
 only for an agent that it detected from the real foreground process. For a fake agent it gives
 `agent_not_ready`, and the PWA shows `Not sent`. See `features/agent-screen.md`.
 
-Use kind `codex` (or another kind that is not `claude`) to see terminal text on the agent screen. A
-fake `claude` agent goes to the Claude history path and shows `Nothing here yet`.
+Use kind `codex` (or another kind that is not `claude`, `pi`, or `opencode`) to see terminal text on
+the agent screen. A fake `claude`, `pi`, or `opencode` agent goes to the history path and shows
+`Nothing here yet`, because it has no session. To see pi or OpenCode history, start the real agent
+in a pane of the run (`$S/herdr.sh <run> pane run <pane> pi`).
 
 The browser (`cdp.ts`, one page that stays open between calls, so its `/ws` stays open too):
 

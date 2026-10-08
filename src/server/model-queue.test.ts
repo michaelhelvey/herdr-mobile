@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 
 import type { AgentStatus, AppState } from "../shared/messages.ts";
-import { ModelQueue } from "./model-queue.ts";
+import { changeLabel, ModelQueue } from "./model-queue.ts";
 
 function state(status: AgentStatus): AppState {
   return {
@@ -54,5 +54,14 @@ describe("ModelQueue", () => {
       status: "failed",
       error: "the model picker did not open",
     });
+  });
+});
+
+describe("changeLabel", () => {
+  test("names a Claude alias, and drops the provider of a full model ID", () => {
+    expect(changeLabel({ model: "opus", effort: "high", scope: "session" })).toBe("Opus · high");
+    expect(changeLabel({ model: "t4/gpt-5.6-sol", effort: null, scope: "session" })).toBe(
+      "gpt-5.6-sol",
+    );
   });
 });

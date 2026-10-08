@@ -94,7 +94,8 @@ describe("handleRpc", () => {
         "claude",
         {
           load: () => Promise.resolve(null),
-          controls: () => Promise.resolve({ commands: [], models: [], efforts: [] }),
+          controls: () =>
+            Promise.resolve({ commands: [], models: [], efforts: [], defaults: false }),
           dialog: () => Promise.resolve(null),
           choose: () => Promise.resolve(),
           setModel: () => Promise.resolve(),

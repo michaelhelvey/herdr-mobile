@@ -1,0 +1,22 @@
+     You prefer spaces.
+
+     Build · GPT-6 Luna · 2m 3s · 16.6 tok/s
+                                                                                                                     █
+  ┃                                                                                                                  █
+  ┃  Run the shell command: echo permission-test                                                                     █
+  ┃                                                                                                                  █
+                                                                                                                     █
+  ┃                                                                                                                  █
+  ┃  ⠹ echo permission-test                                                                                          █
+  ┃                                                                                                                  █
+                                                                                                                     █
+     Press ctrl+b to move running work to the background                                                             █
+
+  ┃
+  ┃  △ Permission required
+  ┃
+  ┃  $ echo permission-test
+  ┃
+  ┃
+  ┃   Allow once   Always allow   Reject                                 ctrl+f fullscreen  ⇆ select  enter confirm
+  ┃

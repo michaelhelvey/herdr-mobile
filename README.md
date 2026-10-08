@@ -28,6 +28,9 @@ phone (this app) ──wifi or tailscale──▶ bridge (on your computer) ─�
 Herdr runs on your computer. The **bridge** in this repo also runs on your computer. It serves the
 app to your phone and connects the app to Herdr. Your phone only opens a web page.
 
+**note: this project is 100% vibeslop. i just wanted to yap at my agents from my phone. dont take it
+too seriously.**
+
 ## 1. Install Herdr and Bun on your computer
 
 Do these steps on the Mac or Linux computer where your agents run.

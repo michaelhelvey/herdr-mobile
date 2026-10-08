@@ -7,12 +7,15 @@ key sheet when the agent is blocked. The bridge side is `src/server/rpc.ts` (RPC
 
 The screen has two sources, selected by the agent kind:
 
-- **History** (kind `claude` only, `src/server/history/claude.ts`). The bridge finds the Claude Code
-  session file from the PID of the pane foreground process (`~/.claude/sessions/<pid>.json`, then
-  `~/.claude/projects/<cwd slug>/<id>.jsonl`). The screen shows it as chat
-  (`src/client/views/chat.tsx`): Markdown, tool runs, diff cards. It never shows terminal text.
-- **Terminal** (all other kinds). The screen polls `agent.read` and shows the text in
-  `pre.msg-terminal` (`src/client/agents/generic.ts`; `opencode` has its own adapter).
+- **History** (kinds `claude`, `pi`, `opencode`; `src/server/history/`). The bridge finds the Claude
+  Code session file from the PID of the pane foreground process (`~/.claude/sessions/<pid>.json`,
+  then `~/.claude/projects/<cwd slug>/<id>.jsonl`). For pi and OpenCode, `agent.get` gives the
+  session (a JSONL path for pi, a session ID in the OpenCode database for OpenCode). The screen
+  shows it as chat (`src/client/views/chat.tsx`): Markdown, tool runs, diff cards. It never shows
+  terminal text. OpenCode questions and permission prompts show in the sheet; the pi model sheet
+  changes the model and the thinking level.
+- **Terminal** (all other kinds, or when the bridge has no history provider for the kind). The
+  screen polls `agent.read` and shows the text in `pre.msg-terminal` (`src/client/agents/`).
 
 ## Sub-features
 
@@ -40,7 +43,7 @@ Tap an agent row in the list, or open `/agent/<paneId>` directly.
 
 ## Driving it with cdp.ts
 
-Use kind `codex` (or any kind that is not `claude`) for terminal mode:
+Use kind `codex` (or any kind that is not `claude`, `pi`, or `opencode`) for terminal mode:
 
 ```sh
 S=.claude/skills/verify-herdr-pwa/scripts

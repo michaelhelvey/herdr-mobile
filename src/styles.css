@@ -1668,6 +1668,10 @@ button.msg {
   transform: scale(0.97);
 }
 
+.model-chip:disabled:active {
+  transform: none;
+}
+
 /* Sheets that come up from the bottom */
 
 .modal {
@@ -1768,7 +1772,8 @@ button.msg {
 
 .effort-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   gap: 4px;
   padding: 4px;
   border-radius: 12px;

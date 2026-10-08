@@ -354,11 +354,29 @@ messages sent while the agent works (`attachment.type: "queued_command"`), assis
 tool calls. The tool result of Edit and Write has `toolUseResult.structuredPatch`, which gives diff
 hunks with line numbers.
 
+For pi and OpenCode, `agent.get` gives the session in `agent.agent_session`. The Herdr plugin of the
+harness reports it:
+
+```json
+{ "agent_session": { "kind": "path", "value": "/Users/me/.pi/agent/sessions/.../x.jsonl" } }
+```
+
+- **pi** (`kind: "path"`): the value is the session JSONL file. Each entry has `id` and `parentId`,
+  so the file is a tree. The conversation is the path from the last entry to the root. The
+  `toolResult` of the edit tool has `details.patch`, a unified diff. The bridge changes the model
+  with the prompts `/thinking <level>` and `/model <provider>/<id>`. The model sheet lists
+  `enabledModels` from `.pi/settings.json` or `~/.pi/agent/settings.json`.
+- **OpenCode v2** (`kind: "id"`): the value is a session ID (`ses_...`). The bridge reads the rows
+  of `session_message` for that session from `~/.local/share/opencode/opencode.db` (read only; WAL
+  lets OpenCode write at the same time). Tool parts keep `metadata.files[]` with a unified diff for
+  each file. The question form and the permission prompt are read from the `visible` screen text and
+  answered with keys. The bridge cannot change the model of OpenCode.
+
 ### Recommendation
 
 Use the Herdr API to control agents and to get status: list, prompt, keys, and the event stream. To
-show a Claude Code agent, read its JSONL file. For other agent kinds, show the `agent.read` text in
-a terminal-style view.
+show a Claude Code, pi, or OpenCode agent, read its session. For other agent kinds, show the
+`agent.read` text in a terminal-style view.
 
 ## Versions
 
