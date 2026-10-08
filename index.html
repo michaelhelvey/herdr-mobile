@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="herdr" />
+    <meta name="theme-color" content="#0b0b0d" />
+    <!--
+      The bridge serves these files at fixed paths. The Bun bundler cannot resolve absolute paths in
+      link elements, so this script adds the links.
+    -->
+    <script>
+      for (const [rel, href] of [
+        ["manifest", "/manifest.webmanifest"],
+        ["icon", "/favicon.png"],
+        ["apple-touch-icon", "/apple-touch-icon.png"],
+      ]) {
+        const link = document.createElement("link");
+
+        link.rel = rel;
+        link.href = href;
+        document.head.append(link);
+      }
+    </script>
+    <title>herdr</title>
+    <!--
+      Some browsers (for example Brave) add their own scripts to each page. Errors in these
+      scripts show as "Script error." (a script from a different origin) or at line 1 of this page
+      (an injected script). They are not errors of the app. This listener stops them before the
+      error overlay of the Bun dev server gets them. The browser console still shows them. This
+      script must be a classic script before all module scripts, so that it runs first.
+    -->
+    <script>
+      window.addEventListener("error", (event) => {
+        const injected = event.filename === location.href && event.lineno === 1;
+
+        if (event.message === "Script error." || injected) {
+          event.stopImmediatePropagation();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>

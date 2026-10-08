@@ -1,0 +1,7 @@
+[test]
+root = "./src"
+pathIgnorePatterns = ["**/*.e2e.test.ts"]
+# Runs the test files and the tests in a random order, so that a test that depends on the state of a
+# test before it fails at once. Do not turn this off to make a test pass: fix the test. A run prints
+# its seed, such as `--seed=265364776`. To run the same order again, use `bun test --seed=265364776`.
+randomize = true

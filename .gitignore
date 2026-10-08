@@ -1,0 +1,21 @@
+# Local
+.DS_Store
+*.local
+*.log*
+
+# Dist
+node_modules
+dist/
+
+# clankers
+.pi
+.opencode
+
+# environment
+.env
+
+# Rstack
+.rstack/cache
+
+# verify-herdr-pwa skill runs
+.verify/
